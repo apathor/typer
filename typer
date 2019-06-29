@@ -1,0 +1,72 @@
+#!/usr/bin/env bash
+# typer - pipe in, type out
+# typer © Mike Lalumiere 2019
+typer() {
+    # usage
+    read -r -d '' use <<EOF
+USAGE: typer [OPTIONS] < TEXT
+Write text input delayed to simulate typing.
+
+OPTIONS:
+ -h      : Print some help text
+ -c RATE : Print rate in characters per second (0-999)
+ -r      : Randomized delay between characters (default)
+ -s      : Smooth output, no randomization
+
+EXAMPLES:
+ $> typer -c 5 <<< "Hello, \$USER..."
+ $> typer -r -c 50 < <(fortune)
+ $> nethack | typer -c 600
+ $> ttyrec /dev/null | typer -s -c 900
+
+(c) Mike Lalumiere 2019
+EOF
+    # return nicely on interrupt
+    trap 'printf "\n"; return 2' SIGINT
+    # get options
+    local rate=30 mode=0
+    while getopts ":hc:rs" opt; do
+        case "$opt" in
+            c) # rate in characters per second 0-999
+                rate="$OPTARG"
+                if [[ "$rate" -ge 1000 ]] || [[ "$rate" -le 0 ]]; then
+                    printf "Rate must be between 1 and 999.\n" >&2
+                    return 2
+                fi
+                ;;
+            r) # random mode
+                mode=0
+                ;;
+            s) # smooth mode
+                mode=1
+                ;;
+
+            h) # help?
+                printf "%s\n" "$use"
+                return 1
+                ;;
+            \?) # invalid
+                printf  "Invalid option: -%s\n\n%s\n" "$OPTARG" "$use" >&2
+                return 1
+                ;;
+        esac
+    done
+    # read one character at a time from standard input
+    local wait step
+    while IFS= read -r -N 1 c; do
+        # calculate wait in thousanths of a second
+        if [ "$mode" -eq 1 ]; then
+            # smoothly
+            wait=$(printf "0.%03d" $(( 1000 / rate )) )
+        else
+            # randomly
+            wait=$(printf "0.%03d" $(( RANDOM % ( 2000 / rate ) )) )
+        fi
+        # delay that long
+        sleep "$wait"
+        # write the character
+        printf "%s" "$c"
+    done
+}
+# run it unless sourced
+if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then typer "$@"; fi

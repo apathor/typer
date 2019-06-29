@@ -1,0 +1,16 @@
+USAGE: typer [OPTIONS] < TEXT
+Write text input delayed to simulate typing.
+
+OPTIONS:
+ -h      : Print some help text
+ -c RATE : Print rate in characters per second (0-999)
+ -r      : Randomized delay between characters (default)
+ -s      : Smooth output, no randomization
+
+EXAMPLES:
+ $> typer -c 5 <<< "Hello, \$USER..."
+ $> typer -r -c 50 < <(fortune)
+ $> nethack | typer -c 600
+ $> ttyrec /dev/null | typer -s -c 900
+
+(c) Mike Lalumiere 2019
